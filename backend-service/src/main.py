@@ -30,5 +30,8 @@ def get_qa(query: str = Query(..., description="Query to generate QA from"),
 @app.get("/summarize") 
 def get_summary(category: str = Query(..., description="Category to summarize"),
                 date: str = Query(..., description="Date for the category summary")):
-    # generate_summary(date, category)
-    return {"category": category, "date": date}
+    res = generate_summary(date, category)
+    return {
+        "Status Code" : 200,
+        "Response" : res
+    }

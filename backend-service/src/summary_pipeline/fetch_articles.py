@@ -6,23 +6,35 @@ def vectorize_category(category):
 def fetch_articles_by_date_and_category(date, category):
     category_vector = vectorize_category(category)
 
-    query_response = index.query(
+    base_query_response = index.query(
         vector=category_vector,
         filter={"date": {"$eq": date}},
-        top_k=1000,  
+        top_k=1,
         include_metadata=True
     )
 
     articles = {}
-    for match in query_response['matches']:
-        metadata = match['metadata']
+    if base_query_response['matches']:
+        base_chunk = base_query_response['matches'][0]
+        metadata = base_chunk['metadata']
         url = metadata['url']
-        if url not in articles:
-            articles[url] = []
-        articles[url].append((int(metadata['chunk_id']), metadata['content']))
+        base_chunk_id = int(metadata['chunk_id'])
 
-    for url in articles:
-        articles[url].sort()
-        articles[url] = ' '.join([chunk for _, chunk in articles[url]])
+        all_chunks = []
+        for i in range(0, 1000): 
+            if i != base_chunk_id:
+                id = f"{url}_{i}"
+                chunk_query = index.query(
+                    id=id,
+                    top_k=1,
+                    include_metadata=True
+                )
+                if not chunk_query['matches']:
+                    break
+                all_chunks.append((i, chunk_query['matches'][0]['metadata']['content']))
 
-    return articles
+        all_chunks.sort(key=lambda x: x[0])
+        articles[url] = ' '.join([chunk[1] for chunk in all_chunks])
+
+    for key, value in articles.items():
+        return key,value
